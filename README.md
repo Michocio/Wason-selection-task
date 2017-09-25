@@ -7,6 +7,6 @@ It is one of the most famous tasks in the study of deductive reasoning. For more
 Project is implemented using *Django* framework for backend and *HTML5* & *CSS* and *JS* for frontend. The researcher can configure many things using admin panel. The one can choose i.e.
 duration of particular experiment phase, add new cards. It is also possible to generate raports from users sessions. Raports are generated to csv, and contains of many details of user session.
 
-*Usage of *web workes* is one of the things that are worth the attention.*
+**Usage of *web workes* is one of the things that are worth the attention.**
 
 
