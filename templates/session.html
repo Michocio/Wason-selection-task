@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Session</title>
+    <style>
+        body{
+            background-color: white;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+        // Global values
+        var timer;
+        var limit = Number({{ non_activity }});
+        var times = [];
+        var activity_timer;
+        var opis = false;
+        var if_rhytm_detection = true;
+    </script>
+    <script src = "{% static "cookies.js" %}"></script>
+    <script src = "{% static "rythm.js" %}"></script>
+    <script src = "{% static "timer.js" %}"></script>
+    <script src = "{% static "non_active.js" %}"></script>
+    <script src = "{% static "clicks.js" %}"></script>
+
+    <script>
+        timer = new Worker("{% static "timer.js" %}");
+        activity_timer = new Worker("{% static "timer.js" %}");
+
+        // Timer will send info when it time will be up
+        timer.postMessage({"name" : "start", "time" : "{{ duration }}"});
+
+
+        activity_timer.postMessage({"name" : "start", "time" : String(limit)});
+        activity_timer.onmessage = function(event) {
+            $('body').css("background-color", "red");
+        }
+
+        timer.onmessage = function(event) {
+
+            if(event.data != "timeIsUp") {
+                time_of_clik(event, if_rhytm_detection);
+            }
+            else if('{{ which }}' == '1') {
+
+                var csrftoken = getCookie('csrftoken');
+                $.ajaxSetup({
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                });
+
+                $.post({
+                    url: "/GIL_data",
+                    data: { 'CSRFToken' : csrftoken,
+                            "session": 1,
+                            "clicks" : JSON.stringify(times),
+                            "pk" : getCookie('pk'),
+                        'what' : '0'
+                    },
+                    success: function () {
+                        alert("Koniec danego etapu!");
+                        var i = {{ which }} +2;
+                        window.location.replace("/info/" + i +"/");
+                    },
+                    error: function (msg) {
+                        alert("Error w czasie wysylania danych!");
+                    }
+                });
+
+            }
+            else
+            {
+                alert("Koniec danego etapu!");
+                var i = {{ which }} +2;
+                window.location.replace("/info/" + i +"/");
+            }
+        }
+    </script>
+</head>
+<body>
+
+</body>
+</html>

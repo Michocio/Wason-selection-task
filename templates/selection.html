@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Selection</title>
+     <style>
+        body
+        {
+            background-color: white;
+        }
+        button
+        {
+            padding : 50px;
+            cursor: pointer;
+        }
+        #cards button
+        {
+            border: 0px outset red;
+        }
+    </style>
+    <script>
+        var cards_state =[];
+        var cards_clicks_time = [];
+        var cards_clicks = [];
+        var if_rhytm_detection = true;
+
+
+        cards_state.push(0);
+        cards_state.push(0);
+        cards_state.push(0);
+        cards_state.push(0);
+
+        var start = 0;
+        var opis = true;
+
+        var overall_time = 0;
+        var task_time = 0;
+        var overall_timer;
+        var task_timer;
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src = "{% static "front.js" %}"></script>
+    <script>
+        if('{{ which }}' == '1') {
+            if ('{{ training }}' == '0')
+                alert("Zadanie nr: " + {{ count }});
+            else
+                alert("Zadanie treningowe");
+        }
+        center_div();
+        $(document).ready(function () {
+            overall_timer = new Worker("{% static "timer.js" %}");
+
+            overall_timer.postMessage({"name" : "start", "time" : "360000"});
+
+            if('{{ which }}' != '0')
+            {
+                opis = true;
+                /*
+                    Historyjka
+                    Reguła
+                    Dodatkowy opis
+                    Polecenie
+                    Reguła ta prezentowa jest jeszcze raz poniżej
+                 */
+                if ('{{ settings.group_type }}' != '1') {// Eksperymentalne
+                    $('#up').html('<div id ="description">{{ description }}</div>' +
+                        '<br> <div id="rule" style="text-align: center"><b>{{ rule }}</b></div> ' +
+                        '<div id ="additional_description">{{ additional_description}}</div>' +
+                        '<div id ="task">{{ task }}</div> Reguła ta prezentowa jest jeszcze raz poniżej');
+                }
+                else {// Kontrolna
+                    $('#up').html('<div id ="description">{{ description }}</div>');
+                }
+            }
+            else
+            {// Sesja treningowa
+                $("#up").css('height', '150px');
+                opis = false;
+                if_rhytm_detection = true;
+                $("#next").css('visibility', 'hidden');
+                $('#cards').css('visibility', 'visible');
+
+                timer = new Worker("{% static "timer.js" %}");
+                activity_timer = new Worker("{% static "timer.js" %}");
+                timer.postMessage({"name" : "start", "time" : "{{ duration }}"});
+
+                activity_timer.postMessage({"name" : "start", "time" : String(limit)});
+                activity_timer.onmessage = function(event) {
+                    $('body').css("background-color", "red");
+                }
+
+                timer.onmessage = function(event)
+                {
+
+                    if(event.data != "timeIsUp") {
+                        console.log("yy");
+                        if(!card_clicked || '{{ which }}' == '0')
+                            time_of_clik(event, true);
+                    }
+                    else
+                    {// Time is up
+                        window.location.replace('/info/4');
+                    }
+                }
+            }
+        });
+    </script>
+    <script>
+        // Global values
+        var timer;
+        var limit = Number({{ non_activity }});
+        var times = [];
+        var activity_timer;
+
+        var card_clicked = false;
+    </script>
+    <script src = "{% static "cookies.js" %}"></script>
+    <script src = "{% static "rythm.js" %}"></script>
+    <script src = "{% static "timer.js" %}"></script>
+    <script src = "{% static "non_active.js" %}"></script>
+    <script src = "{% static "clicks.js" %}"></script>
+    <script>
+        
+        function send_data() {
+            var csrftoken = getCookie('csrftoken');
+                $.ajaxSetup({
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                });
+
+            overall_timer.onmessage = function(event) {
+                overall_time = Number(event.data);
+
+                $.post({
+                    url: "/save_data",
+                    data: { 'CSRFToken' : csrftoken,
+                            "clicks" : JSON.stringify(cards_clicks_time),
+                            "cards" : JSON.stringify(cards_clicks),
+                            "pk" : getCookie('pk'),
+                            "task_pk" : '{{ choosen.pk }}',
+                            'card1' : {{ card1.pk }},
+                            'card2' : {{ card2.pk }},
+                            'card3': {{ card3.pk }},
+                            'card4'  : {{ card4.pk }},
+                        'overall_time' : overall_time,
+                        'task_time' : task_time,
+
+                    },
+                    success: function (data) {
+                        if ('{{ mode }}' != '1' && '{{ settings.group_type }}' != '1') {
+
+                        $.post({
+                            url: "/GIL_data",
+                            data: {
+                                'CSRFToken': csrftoken,
+                                "clicks": JSON.stringify(times),
+                                "pk": getCookie('pk'),
+                                'task_pk': String(data),
+                                'what': '1'
+                            },
+                            success: function () {
+                                if ('{{ left }}' != '0')
+                                    window.location.replace(window.location.href);
+                                else
+                                    window.location.replace("" + "/");
+
+                            },
+                            error: function (msg) {
+                                alert("Error w czasie wysylania danych!");
+                            }
+                        });
+                    }
+                    else
+                        {
+                            if ('{{ left }}' != '0')
+                                    window.location.replace(window.location.href);
+                            else
+                                    window.location.replace("" + "/");
+                        }
+                    },
+                    error: function (msg) {
+                        alert("Error w czasie wysylania danych!");
+                    }
+                });
+
+
+            };
+
+
+        }
+        
+        function task_part() {
+            task_timer = new Worker("{% static "timer.js" %}");
+
+            task_timer.postMessage({"name" : "start", "time" : "360000"});
+
+            task_timer.onmessage = function(event) {
+                task_time = Number(event.data);
+            };
+
+            if('{{ settings.group_type }}'  !='3' || '{{ mode }}' =='1')
+                if_rhytm_detection = false;
+
+            $('#cards').css('visibility', 'visible');
+
+            if('{{ settings.group_type }}' == '1')
+            {// Kontrolna
+                /*
+                    Reguła
+                    Dalszy opis
+                    Karty
+                    Polecenie
+                 */
+                $('#bottom').html('<br> <div id="rule" style="text-align: center"><b>{{ rule }}</b></div> ' +
+                        '<div id ="additional_description">{{ additional_description}}</div>');
+            }
+            else
+            {
+                $('#bottom').html('<br> <div id="rule" style="text-align: center"><b>{{ rule }}</b></div> ');
+            }
+
+            $('#under_btn').html('<div id ="task">{{ task }}</div>' +
+            '<br><br><i>Naciśnij odpowiednie przyciski reprezentujące karty. Klikając przycisk powtórnie możesz cofnąć wybór');
+
+            timer = new Worker("{% static "timer.js" %}");
+            activity_timer = new Worker("{% static "timer.js" %}");
+
+            timer.postMessage({"name" : "start", "time" : "360000"});
+
+            activity_timer.postMessage({"name" : "start", "time" : String(limit)});
+            activity_timer.onmessage = function(event) {
+                if('{{ mode }}' != '1' || '{{ settings.group_type }}' == '1')
+                    $('body').css("background-color", "red");
+            }
+
+            timer.onmessage = function(event) {
+
+                if(event.data != "timeIsUp") {
+                    if(!card_clicked)
+                        time_of_clik(event, if_rhytm_detection);
+                    else
+                        cards_clicks_time.push(Number(event.data));
+                    card_clicked = false;
+                }
+            }
+        }
+        
+        $(document).ready(function () {
+            
+            $('#next').click(function () {
+                if(start == 1)
+                {
+                    task_timer.postMessage("ask");
+                    overall_timer.postMessage("ask");
+                    send_data();
+                }
+                else
+                {
+                    opis = false;
+                    start = 1;
+                    task_part();
+                }
+            });
+            
+            
+            $('#cards button').click(function () {
+                card_clicked = true;
+                if('{{ which }}' == '1' && start == 1)
+                    timer.postMessage("ask");
+
+                cards_clicks.push(Number($(this).attr('id')) - 1);
+
+                if ($(this).css("border").search('solid') == -1) {
+                    $(this).css("border", "5px solid blue");
+                    cards_state[Number($(this).attr('id')) - 1] = 1;
+                }
+                else {
+                    $(this).css("border", "0px outset blue");
+                    cards_state[Number($(this).attr('id')) - 1] = 0;
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id = "center" style="padding:10px;border-style: solid; border-width: 5px;border-color: darkblue;width:500px;position: absolute">
+        <div id="up" ></div>
+        <hr style="margin-top: 10px; margin-bottom: 40px;">
+        <div id="bottom"></div>
+        <div id ="cards" style="visibility: hidden;">
+            <center>
+                <button id="1">                {% if which == '1' %}
+                    {{ card1.text }}
+                {% else %}
+
+                {% endif %}</button>
+                <button id="2">                {% if which == '1' %}
+                    {{ card2.text }}
+                {% else %}
+
+                {% endif %}</button>
+                <button id="3">                {% if which == '1' %}
+                    {{ card3.text }}
+                {% else %}
+
+                {% endif %}</button>
+                <button id="4">                {% if which == '1' %}
+                    {{ card4.text }}
+                {% else %}
+
+                {% endif %}</button>
+            </center>
+        </div>
+        <div id="under_btn"></div>
+        <button  id="next" style="float: right; margin : 30px; padding: 10px;">Dalej</button>
+    </div>
+
+</body>
+</html>

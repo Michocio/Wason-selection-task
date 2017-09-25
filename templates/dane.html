@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dane</title>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+    function generuj(e) {
+        window.location = "/data/"+ e + "/";
+    }
+    </script>
+</head>
+
+<body>
+
+{% for i in users %}
+    {{ i.nick }} <button id="{{ i.pk }}" onclick="generuj({{ i.pk }})">Generuj</button><br>
+{% endfor %}
+</body>
+</html>
